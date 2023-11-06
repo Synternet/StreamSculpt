@@ -6,11 +6,7 @@ to Syntropy Data Layer as a new data stream.
 
 See [Data Layer Quick Start](https://docs.syntropynet.com/build/) to learn more about Syntropy Data Layer.
 
-## Live Demo And Example
-
-Yet no live demo is available.
-
-### Example
+## Example
 
 1. Ethereum log event received on "syntropy.ethereum.log-event" subject:
 ```json
