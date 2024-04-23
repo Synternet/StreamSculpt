@@ -1,5 +1,9 @@
 # StreamSculpt
 
+[![Latest release](https://img.shields.io/github/v/release/SyntropyNet/StreamSculpt)](https://github.com/SyntropyNet/StreamSculpt/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/SyntropyNet/StreamSculpt/github-ci.yml?label=github-ci)](https://github.com/SyntropyNet/StreamSculpt/actions/workflows/github-ci.yml)
+
 StreamSculpt lets you filter and unpacks Ethereum transaction smart contract receipt event log for given list of ABIs.
 StreanSculpt uses Syntropy Data Layer as Ethereum event logs source. Once event log is decoded it is pushed
 to Syntropy Data Layer as a new data stream.
