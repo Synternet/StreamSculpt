@@ -27,6 +27,9 @@ import (
 //go:embed abi/*.json
 var abiFiles embed.FS
 
+//go:embed abi/map/*.json
+var abiMapFiles embed.FS
+
 type Token struct {
 	Ticker   string
 	Decimals *big.Int
@@ -71,11 +74,31 @@ func NewSubscriberService(s *svcn.NatsService, ctx context.Context, cfg Subscrib
 				log.Fatalf("failed to read ABI file %s: %v", entry.Name(), err)
 			}
 			ABI, err := abi.JSON(bytes.NewReader(data))
+			log.Printf("Loaded ABI: %s", entry.Name())
 			if err != nil {
 				log.Fatalf("failed to parse ABI in file %s: %v", entry.Name(), err)
 			}
 			filenameWithoutExtension := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
 			abis[filenameWithoutExtension] = ABI
+		}
+	}
+
+	mapDirEntries, _ := abiMapFiles.ReadDir("abi/map")
+	for _, entry := range mapDirEntries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			data, err := abiMapFiles.ReadFile("abi/map/" + entry.Name())
+			if err != nil {
+				log.Fatalf("failed to read mapping file %s: %v", entry.Name(), err)
+			}
+			filenameWithoutExtension := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+			var mapping []string
+			json.Unmarshal(data, &mapping)
+			for _, val := range mapping {
+				if _, ok := abis[filenameWithoutExtension]; ok {
+					abis[val] = abis[filenameWithoutExtension]
+					log.Printf("Mapped %s to %s ABI", val, filenameWithoutExtension)
+				}
+			}
 		}
 	}
 
@@ -120,7 +143,7 @@ func (s SubscriberService) ProcessTxLogEventFromStream(data []byte) error {
 		log.Fatalf("failed to decode log data: %v", err)
 		return nil
 	}
-  log.Println(string(data))
+	log.Println(string(data))
 
 	outgoing := types.DecodedEthLogEvent{}
 	outgoing.Address = incoming.Address
