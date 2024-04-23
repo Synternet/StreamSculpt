@@ -54,12 +54,13 @@ See [Data Layer Quick Start](https://docs.syntropynet.com/build/) to learn more 
 
 ## Usage
 
-1. Compile code.
+1. Add to `./internal/service/abi/` and `./internal/service/abi/map/` ABIs of smart contracts to unpack.
+Note: `go:embed` baked files into executable, must be added before compiling.
+
+2. Compile code.
 ```
 make build
 ```
-
-2. Add to `./internal/service/abi/` ABIs of smart contracts to unpack.
 
 3. Run executable.
 ```
@@ -80,7 +81,15 @@ Default `./internal/service/abi/` content:
         0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852.json // ETH-USDT Uniswap Pool
         0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc.json // USDC-ETH Uniswap Pool
         0xb8a1a865e4405281311c5bc0f90c240498472d3e.json // NOIA-ETH Uniswap Pool
+        uniswapv2pair.json // UniswapV2Pair (1)
+      map/
+            uniswap2pair.json // (2)
 ```
+
+From example above you will notice `uniswap2pair.json` `(1)` not mentioned before. This is used together with
+`./internal/service/abi/map/uniswapv2pair.json` `(2)`. `(2)` defined a list of Smart Contract addressed to be mapped
+to `(1)`. This is useful when you have an ABI which is identical to more than one deployed Smart Contracts would
+like to avoid repeating yourself.
 
 ### Flags
 
