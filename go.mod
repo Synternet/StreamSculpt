@@ -1,4 +1,4 @@
-module streamsculpt
+module github.com/synternet/StreamSculpt
 
 go 1.21
 

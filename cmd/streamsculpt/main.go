@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"streamsculpt/internal/service"
+	"github.com/synternet/StreamSculpt/internal/service"
 
-	svcnats "streamsculpt/pkg/nats"
+	svcnats "github.com/synternet/StreamSculpt/pkg/nats"
 
 	nats "github.com/nats-io/nats.go"
 )
@@ -19,7 +19,7 @@ func main() {
 	flagUserCredsSeedPub := flag.String("nats-pub-nkey", "", "NATS publisher user credentials NKey string")
 	flagNatsReconnectWait := flag.Duration("nats-reconnect-wait", 10*time.Second, "NATS reconnect wait duration")
 	flagNatsMaxReconnects := flag.Int("nats-max-reconnect", 500, "NATS max reconnect attempts count")
-	flagNatsTxLogEventsStreamSubject := flag.String("nats-event-log-stream-subject", "syntropy.ethereum.log-event", "NATS event log stream subject")
+	flagNatsTxLogEventsStreamSubject := flag.String("nats-event-log-stream-subject", "synternet.ethereum.log-event", "NATS event log stream subject")
 	flagNatsUnpackedStreamsSubjectPrefix := flag.String("nats-unpacked-streams-subject-prefix", "", "NATS event log stream subject")
 
 	flag.Parse()
