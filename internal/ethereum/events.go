@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	types "streamsculpt/pkg/types"
+	types "github.com/synternet/StreamSculpt/pkg/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/crypto/sha3"

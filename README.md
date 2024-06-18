@@ -1,18 +1,18 @@
 # StreamSculpt
 
-[![Latest release](https://img.shields.io/github/v/release/SyntropyNet/StreamSculpt)](https://github.com/SyntropyNet/StreamSculpt/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/synternet/StreamSculpt)](https://github.com/synternet/StreamSculpt/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/SyntropyNet/StreamSculpt/github-ci.yml?label=github-ci)](https://github.com/SyntropyNet/StreamSculpt/actions/workflows/github-ci.yml)
+[![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/synternet/StreamSculpt/github-ci.yml?label=github-ci)](https://github.com/synternet/StreamSculpt/actions/workflows/github-ci.yml)
 
 StreamSculpt lets you filter and unpacks Ethereum transaction smart contract receipt event log for given list of ABIs.
-StreanSculpt uses Syntropy Data Layer as Ethereum event logs source. Once event log is decoded it is pushed
-to Syntropy Data Layer as a new data stream.
+StreanSculpt uses Synternet Data Layer as Ethereum event logs source. Once event log is decoded it is pushed
+to Synternet Data Layer as a new data stream.
 
-See [Data Layer Quick Start](https://docs.syntropynet.com/build/) to learn more about Syntropy Data Layer.
+See [Data Layer Quick Start](https://docs.synternet.com/build/) to learn more about Synternet Data Layer.
 
 ## Example
 
-1. Ethereum log event received on "syntropy.ethereum.log-event" subject:
+1. Ethereum log event received on "synternet.ethereum.log-event" subject:
 ```json
 {
     "address": "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc",
@@ -31,7 +31,7 @@ See [Data Layer Quick Start](https://docs.syntropynet.com/build/) to learn more 
 }
 ```
 2. Matched against existing ABIs in `./internal/service/abi/` directory.
-3. Published to "syntropy.ethereum.unpacked-log-event.0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc.Swap" subject:
+3. Published to "synternet.ethereum.unpacked-log-event.0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc.Swap" subject:
 ```json
 {
     "address": "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc",
@@ -108,7 +108,7 @@ like to avoid repeating yourself.
 | nats-unpacked-streams-subject-prefix | NATS unpacked streams prefix                                      |
 
 - `nats-*`. NATS.
-`nats-sub-nkey`, `nats-pub-nkey`, `nats-unpacked-streams-subject-prefix` must be provided. Uses Syntropy Data Layer to get Ethereum transactions event log. See [Data Layer Quick Start](https://docs.syntropynet.com/docs/data-layer-quick-start) to learn more.
+`nats-sub-nkey`, `nats-pub-nkey`, `nats-unpacked-streams-subject-prefix` must be provided. Uses Synternet Data Layer to get Ethereum transactions event log. See [Data Layer Quick Start](https://docs.synternet.com/build/data-layer/data-layer-quick-start) to learn more.
 
 ## Docker
 
@@ -129,10 +129,10 @@ Environment variables are all caps flags separated with underscore. See `./docke
 
 We welcome contributions from the community. Whether it's a bug report, a new feature, or a code fix, your input is valued and appreciated.
 
-## Syntropy
+## Synternet
 
 If you have any questions, ideas, or simply want to connect with us, we encourage you to reach out through any of the following channels:
 
 - **Discord**: Join our vibrant community on Discord at [https://discord.com/invite/jqZur5S3KZ](https://discord.com/invite/jqZur5S3KZ). Engage in discussions, seek assistance, and collaborate with like-minded individuals.
-- **Telegram**: Connect with us on Telegram at [https://t.me/SyntropyNet](https://t.me/SyntropyNet). Stay updated with the latest news, announcements, and interact with our team members and community.
-- **Email**: If you prefer email communication, feel free to reach out to us at devrel@syntropynet.com. We're here to address your inquiries, provide support, and explore collaboration opportunities.
+- **Telegram**: Connect with us on Telegram at [https://t.me/Synternet](https://t.me/Synternet). Stay updated with the latest news, announcements, and interact with our team members and community.
+- **Email**: If you prefer email communication, feel free to reach out to us at devrel@synternet.com. We're here to address your inquiries, provide support, and explore collaboration opportunities.

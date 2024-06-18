@@ -16,8 +16,8 @@ import (
 	"strings"
 	"syscall"
 
-	svcn "streamsculpt/pkg/nats"
-	types "streamsculpt/pkg/types"
+	svcn "github.com/synternet/StreamSculpt/pkg/nats"
+	types "github.com/synternet/StreamSculpt/pkg/types"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
