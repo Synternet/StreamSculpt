@@ -97,18 +97,19 @@ like to avoid repeating yourself.
 
 ### Flags
 
-| Flag                                 | Description                                                       |
-| ------------------------------------ | ----------------------------------------------------------------- |
-| nats-urls                            | NATS servers URLs (comma separated)                               |
-| nats-sub-nkey                        | NATS user credentials NKey string to subscribe to ETH stream      |
-| nats-pub-nkey                        | NATS user credentials NKey string to publish unpacked event log   |
-| nats-reconnect-wait                  | NATS reconnect wait duration                                      |
-| nats-max-reconnect                   | NATS max reconnect attempts count                                 |
-| nats-event-log-stream-subject        | NATS event log stream subject                                     |
-| nats-unpacked-streams-subject-prefix | NATS unpacked streams prefix                                      |
+| Flag                          | Description                                                                             |
+| ------------------------------| --------------------------------------------------------------------------------------- |
+| nats-urls                     | NATS servers URLs (comma separated)                                                     |
+| nats-sub-nkey                 | NATS user credentials NKey string to subscribe to ETH stream                            |
+| nats-pub-nkey                 | NATS user credentials NKey string to publish unpacked event log                         |
+| nats-reconnect-wait           | NATS reconnect wait duration                                                            |
+| nats-max-reconnect            | NATS max reconnect attempts count                                                       |
+| nats-event-log-stream-subject | NATS event log stream subject                                                           |
+| nats-pub-prefix               | NATS unpacked streams prefix, format: {nats-pub-prefix}.{nats-pub-name}.<contract>.<fn> |
+| nats-pub-name                 | NATS unpacked streams name, format: {nats-pub-prefix}.{nats-pub-name}.<contract>.<fn>   |
 
 - `nats-*`. NATS.
-`nats-sub-nkey`, `nats-pub-nkey`, `nats-unpacked-streams-subject-prefix` must be provided. Uses Synternet Data Layer to get Ethereum transactions event log. See [Data Layer Quick Start](https://docs.synternet.com/build/data-layer/data-layer-quick-start) to learn more.
+`nats-sub-nkey`, `nats-pub-nkey`, `nats-pub-prefix`, `nats-pub-name` must be provided. Uses Synternet Data Layer to get Ethereum transactions event log. See [Data Layer Quick Start](https://docs.synternet.com/build/data-layer/data-layer-quick-start) to learn more.
 
 ## Docker
 

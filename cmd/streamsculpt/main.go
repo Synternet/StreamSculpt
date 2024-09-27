@@ -3,78 +3,68 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
-	"time"
+	"os"
+	"os/signal"
 
-	"github.com/synternet/StreamSculpt/internal/service"
-
-	svcnats "github.com/synternet/StreamSculpt/pkg/nats"
-
-	nats "github.com/nats-io/nats.go"
+	service "github.com/synternet/StreamSculpt/internal/service"
+	"github.com/synternet/data-layer-sdk/pkg/options"
+	svc "github.com/synternet/data-layer-sdk/pkg/service"
+	"github.com/synternet/data-layer-sdk/pkg/user"
 )
 
 func main() {
 	flagNatsUrls := flag.String("nats-urls", "nats://34.107.87.29 ", "NATS server URLs (separated by comma)")
 	flagUserCredsSeedSub := flag.String("nats-sub-nkey", "", "NATS subscriber user credentials NKey string")
 	flagUserCredsSeedPub := flag.String("nats-pub-nkey", "", "NATS publisher user credentials NKey string")
-	flagNatsReconnectWait := flag.Duration("nats-reconnect-wait", 10*time.Second, "NATS reconnect wait duration")
-	flagNatsMaxReconnects := flag.Int("nats-max-reconnect", 500, "NATS max reconnect attempts count")
 	flagNatsTxLogEventsStreamSubject := flag.String("nats-event-log-stream-subject", "synternet.ethereum.log-event", "NATS event log stream subject")
-	flagNatsUnpackedStreamsSubjectPrefix := flag.String("nats-unpacked-streams-subject-prefix", "", "NATS event log stream subject")
+	flagNatsPubPrefix := flag.String("nats-pub-prefix", "synternet", "NATS event log stream prefix")
+	flagNatsPubName := flag.String("nats-pub-name", "ethereum.unpacked", "NATS event log stream name")
 
 	flag.Parse()
 
-	if flagNatsUnpackedStreamsSubjectPrefix == nil || *flagNatsUnpackedStreamsSubjectPrefix == "" {
-		log.Fatalf("missing flag: nats-unpacked-streams-subject-prefix")
-	}
-
-	optsSub := []nats.Option{}
-
-	flagUserCredsJWTSub, err := svcnats.CreateAppJwt(*flagUserCredsSeedSub)
+	userCredsSeedSub, userCredsJWTSub, err := user.CreateCreds([]byte(*flagUserCredsSeedSub))
 	if err != nil {
 		log.Fatalf("failed to create sub JWT: %v", err)
 	}
-	optsSub = append(optsSub, nats.UserJWTAndSeed(flagUserCredsJWTSub, *flagUserCredsSeedSub))
 
-	optsSub = append(optsSub, nats.MaxReconnects(*flagNatsMaxReconnects))
-	optsSub = append(optsSub, nats.ReconnectWait(*flagNatsReconnectWait))
+	connSub, err := options.MakeNats("Streaming consumer", *flagNatsUrls, "", userCredsSeedSub, userCredsJWTSub, "", "", "")
+	if err != nil {
+		panic(fmt.Errorf("Failed creating NATS connection: %w", err))
+	}
 
-	optsPub := []nats.Option{}
-
-	flagUserCredsJWTPub, err := svcnats.CreateAppJwt(*flagUserCredsSeedPub)
+	userCredsSeedPub, userCredsJWTPub, err := user.CreateCreds([]byte(*flagUserCredsSeedPub))
 	if err != nil {
 		log.Fatalf("failed to create pub JWT: %v", err)
 	}
-	optsPub = append(optsPub, nats.UserJWTAndSeed(flagUserCredsJWTPub, *flagUserCredsSeedPub))
 
-	optsPub = append(optsPub, nats.MaxReconnects(*flagNatsMaxReconnects))
-	optsPub = append(optsPub, nats.ReconnectWait(*flagNatsReconnectWait))
-
-	svcnSub := svcnats.MustConnect(
-		svcnats.Config{
-			URI:  *flagNatsUrls,
-			Opts: optsSub,
-		})
-	log.Println("NATS sub service connected")
-
-	svcnPub := svcnats.MustConnect(
-		svcnats.Config{
-			URI:  *flagNatsUrls,
-			Opts: optsPub,
-		})
-	log.Println("NATS pub service connected")
-
-	txMsgChannel := make(service.MessageChannel, 1024)
-
-	cfgSub := service.SubscriberConfig{}
-	cfgPub := service.PublisherConfig{
-		SubjectPrefix: *flagNatsUnpackedStreamsSubjectPrefix,
+	connPub, err := options.MakeNats("Streaming producer", *flagNatsUrls, "", userCredsSeedPub, userCredsJWTPub, "", "", "")
+	if err != nil {
+		panic(fmt.Errorf("Failed creating NATS connection: %w", err))
 	}
-	sSub := service.NewSubscriberService(svcnSub, context.Background(), cfgSub, txMsgChannel)
-	sPub := service.NewPublisherService(svcnPub, context.Background(), cfgPub, txMsgChannel)
 
-	svcnSub.AddHandler(*flagNatsTxLogEventsStreamSubject, sSub.ProcessTxLogEventFromStream)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
-	go sPub.Serve()
-	sSub.Serve()
+	opts := []options.Option{
+		svc.WithContext(ctx),
+		svc.WithSubNats(connSub),
+		svc.WithPubNats(connPub),
+		svc.WithPrefix(*flagNatsPubPrefix),
+		svc.WithName(*flagNatsPubName),
+		svc.WithParam("TxLogEventsStreamSubject", *flagNatsTxLogEventsStreamSubject),
+	}
+
+	s := service.New(opts...)
+	defer s.Close()
+
+	pubCtx := s.Start()
+
+	select {
+	case <-ctx.Done():
+		log.Println("Shutdown")
+	case <-pubCtx.Done():
+		log.Println("Publisher stopped with cause: ", context.Cause(pubCtx).Error())
+	}
 }

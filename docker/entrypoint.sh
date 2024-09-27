@@ -26,8 +26,12 @@ if [ ! -z "$NATS_EVENT_LOG_STREAM_SUBJECT" ]; then
   CMD="$CMD --nats-event-log-stream-subject $NATS_EVENT_LOG_STREAM_SUBJECT"
 fi
 
-if [ ! -z "$NATS_UNPACKED_STREAMS_SUBJECT_PREFIX" ]; then
-  CMD="$CMD --nats-unpacked-streams-subject-prefix $NATS_UNPACKED_STREAMS_SUBJECT_PREFIX"
+if [ ! -z "$NATS_PUB_PREFIX" ]; then
+  CMD="$CMD --nats-pub-prefix $NATS_PUB_PREFIX"
+fi
+
+if [ ! -z "$NATS_PUB_NAME" ]; then
+  CMD="$CMD --nats-pub-name $NATS_PUB_NAME"
 fi
 
 exec $CMD

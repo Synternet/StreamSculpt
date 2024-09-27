@@ -10,18 +10,15 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 
-	svcn "github.com/synternet/StreamSculpt/pkg/nats"
 	types "github.com/synternet/StreamSculpt/pkg/types"
+	"github.com/synternet/data-layer-sdk/pkg/options"
+	"github.com/synternet/data-layer-sdk/pkg/service"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"golang.org/x/sync/errgroup"
 )
 
 //go:embed abi/*.json
@@ -35,12 +32,6 @@ type Token struct {
 	Decimals *big.Int
 }
 
-type SubscriberConfig struct{}
-
-type PublisherConfig struct {
-	SubjectPrefix string
-}
-
 type Message struct {
 	Postfix string
 	Msg     types.DecodedEthLogEvent
@@ -48,22 +39,13 @@ type Message struct {
 
 type MessageChannel chan Message
 
-type SubscriberService struct {
+type Publisher struct {
+	*service.Service
+	msgChan MessageChannel
 	abis    map[string]abi.ABI
-	ctx     context.Context
-	cfg     SubscriberConfig
-	nats    *svcn.NatsService
-	msgChan MessageChannel
 }
 
-type PublisherService struct {
-	ctx     context.Context
-	cfg     PublisherConfig
-	nats    *svcn.NatsService
-	msgChan MessageChannel
-}
-
-func NewSubscriberService(s *svcn.NatsService, ctx context.Context, cfg SubscriberConfig, msgChan MessageChannel) *SubscriberService {
+func New(opts ...options.Option) *Publisher {
 	abis := make(map[string]abi.ABI)
 
 	dirEntries, _ := abiFiles.ReadDir("abi")
@@ -102,48 +84,58 @@ func NewSubscriberService(s *svcn.NatsService, ctx context.Context, cfg Subscrib
 		}
 	}
 
-	return &SubscriberService{
-		ctx:     ctx,
-		cfg:     cfg,
-		nats:    s,
+	ret := &Publisher{
+		Service: &service.Service{},
+		msgChan: make(MessageChannel, 1024),
 		abis:    abis,
-		msgChan: msgChan,
 	}
+
+	ret.Configure(opts...)
+
+	return ret
 }
 
-func NewPublisherService(s *svcn.NatsService, ctx context.Context, cfg PublisherConfig, msgChan MessageChannel) *PublisherService {
-	return &PublisherService{
-		ctx:  ctx,
-		cfg:  cfg,
-		nats: s,
-		// abi:     ABI,
-		msgChan: msgChan,
+func (p *Publisher) subscribe() error {
+	src := options.Param(p.Options, "TxLogEventsStreamSubject", "")
+	if src == "" {
+		return errors.New("source subject must not be empty")
 	}
-}
-
-func (s SubscriberService) ProcessTxLogEventFromStream(data []byte) error {
-	incoming := types.EthLogEvent{}
-	err := json.Unmarshal(data, &incoming)
-	if err != nil {
+	if _, err := p.SubscribeTo(p.handleTxLogEvent, src); err != nil {
 		return err
 	}
 
-	abi, ok := s.abis[incoming.Address]
+	return nil
+}
+
+func (p *Publisher) handleTxLogEvent(nmsg service.Message) {
+	incoming := types.EthLogEvent{}
+	err := json.Unmarshal(nmsg.Data(), &incoming)
+	if err != nil {
+		fmt.Errorf("Failed to decode JSON: %v", err.Error())
+		return
+		// return err
+	}
+
+	abi, ok := p.abis[incoming.Address]
 	if !ok {
-		return nil
+		// fmt.Errorf("Failed to find ABI: %v", err.Error())
+		return
+		// return nil
 	}
 
 	if err != nil {
 		// Not an exhaustive events list. Silently ignore unknown.
-		return nil
+		return
+		// return nil
 	}
 
 	eventData, err := hex.DecodeString(strings.TrimPrefix(incoming.Data, "0x"))
 	if err != nil {
 		log.Fatalf("failed to decode log data: %v", err)
-		return nil
+		return
+		// return nil
 	}
-	log.Println(string(data))
+	log.Println(string(nmsg.Data()))
 
 	outgoing := types.DecodedEthLogEvent{}
 	outgoing.Address = incoming.Address
@@ -170,97 +162,31 @@ func (s SubscriberService) ProcessTxLogEventFromStream(data []byte) error {
 		log.Fatalf("failed to decode %s event log: %v", event.Name, err)
 	}
 	outgoing.Sig = event.Sig
-	s.msgChan <- Message{
-		Postfix: fmt.Sprintf(".%s.%s", incoming.Address, event.Name),
-		Msg:     outgoing,
-	}
 
-	return nil
+	// s.msgChan <- Message{
+	// 	Postfix: fmt.Sprintf(".%s.%s", incoming.Address, event.Name),
+	// 	Msg:     outgoing,
+	// }
+
+	postfix := fmt.Sprintf("%s.%s", incoming.Address, event.Name)
+	// src := options.Param(p.Options, "", "")
+	// subject := fmt.Sprintf("%s%s", src, postfix)
+
+	fmt.Println("loggged")
+	p.PublishBuf(outgoing.AsJSON(), postfix)
+	// subject := fmt.Sprintf("%s%s", s.cfg.SubjectPrefix, postfix)
+	// if err := p.nats.PublishAsJSON(groupCtx, subject, msg.Msg); err != nil {
+	// 	log.Println(err.Error())
+	// 	return err
+	// }
 }
 
-func (s SubscriberService) Serve() {
-	serveCtx, cancelFn := context.WithCancel(s.ctx)
-	defer cancelFn()
-
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-c
-		log.Println("Subscriber service is interrupted")
-		cancelFn()
-	}()
-
-	rungroup, groupCtx := errgroup.WithContext(serveCtx)
-
-	if s.nats != nil {
-		rungroup.Go(func() error {
-			return s.nats.Serve(groupCtx)
-		})
+func (s *Publisher) Start() context.Context {
+	err := s.subscribe()
+	if err != nil {
+		s.Fail(err)
+		return s.Context
 	}
 
-	log.Println("Subscriber service is started")
-
-	if err := rungroup.Wait(); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			log.Printf("Subscriber service is stopped %s", err.Error())
-		}
-	}
-
-	var completionGroup errgroup.Group
-	if s.nats != nil {
-		completionGroup.Go(func() error {
-			return nil
-		})
-	}
-}
-
-func (s PublisherService) Serve() {
-	serveCtx, cancelFn := context.WithCancel(s.ctx)
-	defer cancelFn()
-
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-c
-		log.Println("Publisher service is interrupted")
-		cancelFn()
-	}()
-
-	rungroup, groupCtx := errgroup.WithContext(serveCtx)
-
-	rungroup.Go(func() error {
-		for {
-			select {
-			case msg := <-s.msgChan:
-				subject := fmt.Sprintf("%s%s", s.cfg.SubjectPrefix, msg.Postfix)
-				if err := s.nats.PublishAsJSON(groupCtx, subject, msg.Msg); err != nil {
-					log.Println(err.Error())
-					return err
-				}
-			case <-groupCtx.Done():
-				return groupCtx.Err()
-			}
-		}
-	})
-
-	if s.nats != nil {
-		rungroup.Go(func() error {
-			return s.nats.Serve(groupCtx)
-		})
-	}
-
-	log.Println("Publisher service is started")
-
-	if err := rungroup.Wait(); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			log.Printf("Service is stopped %s", err.Error())
-		}
-	}
-
-	var completionGroup errgroup.Group
-	if s.nats != nil {
-		completionGroup.Go(func() error {
-			return nil
-		})
-	}
+	return s.Service.Start()
 }

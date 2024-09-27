@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"math/big"
 )
 
@@ -27,6 +28,14 @@ type DecodedEthLogEvent struct {
 	BlockHash        string                 `json:"blockHash"`
 	LogIndex         string                 `json:"logIndex"`
 	Removed          bool                   `json:"removed"`
+}
+
+func (t *DecodedEthLogEvent) AsJSON() []byte {
+	json, err := json.Marshal(t)
+	if err != nil {
+		return []byte{}
+	}
+	return json
 }
 
 type Swap struct {
